@@ -12,9 +12,11 @@
         "transform-es2015-block-scoping",
         "transform-es2015-arrow-functions"
       ]
-    }]
+    }],
+    "flow"
   ],
   "plugins": [
+    "transform-class-properties",
     "add-module-exports",
     "transform-inline-imports-commonjs"
   ],

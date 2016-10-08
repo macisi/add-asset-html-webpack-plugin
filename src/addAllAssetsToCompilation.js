@@ -1,21 +1,30 @@
+// @flow
+
 import path from 'path';
 import crypto from 'crypto';
 import pEachSeries from 'p-each-series';
 import micromatch from 'micromatch';
 import handleUrl from './handleUrl';
 
-function ensureTrailingSlash(string) {
-  if (string.length && string.substr(-1, 1) !== '/') {
+import type {
+  AssetType,
+  ArrayOfAssetsType,
+  WebpackCompilationType,
+  Callback,
+} from '../types';
+
+function ensureTrailingSlash(string: ?string): string {
+  if (string && string.length && string.substr(-1, 1) !== '/') {
     return `${string}/`;
   }
 
-  return string;
+  return string || '';
 }
 
 // Copied from html-webpack-plugin
-function resolvePublicPath(compilation, filename) {
+function resolvePublicPath(compilation: Object, filename: string): string {
   /* istanbul ignore else */
-  const publicPath =
+  const publicPath: string =
     typeof compilation.options.output.publicPath !== 'undefined'
       ? compilation.options.output.publicPath
       : path.relative(path.dirname(filename), '.'); // TODO: How to test this? I haven't written this logic, unsure what it does
@@ -23,7 +32,11 @@ function resolvePublicPath(compilation, filename) {
   return ensureTrailingSlash(publicPath);
 }
 
-function resolveOutput(compilation, addedFilename, outputPath) {
+function resolveOutput(
+  compilation: Object,
+  addedFilename: string,
+  outputPath: ?string
+) {
   if (outputPath && outputPath.length) {
     /* eslint-disable no-param-reassign */
     compilation.assets[`${outputPath}/${addedFilename}`] =
@@ -34,8 +47,8 @@ function resolveOutput(compilation, addedFilename, outputPath) {
 }
 
 async function addFileToAssets(
-  compilation,
-  htmlPluginData,
+  compilation: WebpackCompilationType,
+  htmlPluginData: Object,
   {
     filepath,
     typeOfAsset = 'js',
@@ -43,9 +56,10 @@ async function addFileToAssets(
     hash = false,
     publicPath,
     outputPath,
+    // $FlowFixMe$
     files = [],
-  }
-) {
+  }: AssetType
+): Promise<void> {
   if (!filepath) {
     const error = new Error('No filepath defined');
     compilation.errors.push(error);
@@ -60,11 +74,11 @@ async function addFileToAssets(
     );
 
     if (shouldSkip) {
-      return Promise.resolve(null);
+      return Promise.resolve();
     }
   }
 
-  const addedFilename = await htmlPluginData.plugin.addFileToAssets(
+  const addedFilename: string = await htmlPluginData.plugin.addFileToAssets(
     filepath,
     compilation
   );
@@ -87,18 +101,23 @@ async function addFileToAssets(
   resolveOutput(compilation, addedFilename, outputPath);
 
   if (includeSourcemap) {
-    const addedMapFilename = await htmlPluginData.plugin.addFileToAssets(
+    const addedMapFilename: string = await htmlPluginData.plugin.addFileToAssets(
       `${filepath}.map`,
       compilation
     );
     resolveOutput(compilation, addedMapFilename, outputPath);
   }
 
-  return Promise.resolve(null);
+  return Promise.resolve();
 }
 
 // Visible for testing
-export default async function(assets, compilation, htmlPluginData, callback) {
+export default async function(
+  assets: ArrayOfAssetsType,
+  compilation: WebpackCompilationType,
+  htmlPluginData: Object,
+  callback: Callback<any>
+): Promise<void> {
   try {
     const handledAssets = await handleUrl(assets);
     await pEachSeries(handledAssets, asset =>
